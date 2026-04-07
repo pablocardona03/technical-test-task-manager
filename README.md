@@ -435,16 +435,6 @@ SET AdditionalDataJson = JSON_MODIFY(AdditionalDataJson, '$.priority', 'Medium')
 WHERE Id = 1;
 ```
 
-## Important notes before publishing the repository
-
-Before pushing the final version, remove generated and local-only content from version control if it was already committed.
-
-Also delete the nested file below so the root ignore file is the single source of truth:
-
-```text
-frontend/.gitignore
-```
-
 ## Delivered scope summary
 
 This solution already includes more than the minimum required scope:
