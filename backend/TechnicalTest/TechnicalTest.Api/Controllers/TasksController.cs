@@ -45,6 +45,17 @@ public sealed class TasksController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(TaskResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TaskResponse>> Update(int id, [FromBody] UpdateTaskRequest request, CancellationToken cancellationToken)
+    {
+        var response = await _taskService.UpdateAsync(id, request, cancellationToken);
+
+        return Ok(response);
+    }
+
     [HttpPut("{id:int}/status")]
     [ProducesResponseType(typeof(TaskResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -54,5 +65,15 @@ public sealed class TasksController : ControllerBase
         var response = await _taskService.UpdateStatusAsync(id, request, cancellationToken);
 
         return Ok(response);
+    }
+
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        await _taskService.DeleteAsync(id, cancellationToken);
+
+        return NoContent();
     }
 }

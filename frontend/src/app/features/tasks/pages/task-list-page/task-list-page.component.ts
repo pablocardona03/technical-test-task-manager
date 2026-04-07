@@ -1,9 +1,11 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
+
+import { DrawerComponent } from '../../../../shared/ui/drawer/drawer.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/ui/error-state/error-state.component';
-import { DrawerComponent } from '../../../../shared/ui/drawer/drawer.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { getErrorMessage } from '../../../../shared/utils/http-error.utils';
 import { UsersApiService } from '../../../users/data-access/users-api.service';
 import { User } from '../../../users/models/user.model';
@@ -13,6 +15,7 @@ import { TaskTableComponent } from '../../components/task-table/task-table.compo
 import { TasksApiService } from '../../data-access/tasks-api.service';
 import { TaskFilters } from '../../models/task-filters.model';
 import { Task } from '../../models/task.model';
+import { TaskSortField } from '../../models/task-sort-field.type';
 import { TaskStatus } from '../../models/task-status.type';
 
 @Component({
@@ -32,6 +35,7 @@ import { TaskStatus } from '../../models/task-status.type';
 export class TaskListPageComponent {
   private readonly tasksApi = inject(TasksApiService);
   private readonly usersApi = inject(UsersApiService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly users = signal<User[]>([]);
@@ -45,10 +49,12 @@ export class TaskListPageComponent {
     status: '',
     assignedUserId: null,
     priority: '',
-    tag: ''
+    tag: '',
+    hideCompleted: true,
+    sortBy: 'createdAt',
+    sortDirection: 'desc'
   });
 
-  readonly isBusy = computed(() => this.loadingTasks() || this.loadingUsers());
   readonly hasNoTasks = computed(() => !this.loadingTasks() && !this.taskError() && this.tasks().length === 0);
 
   constructor() {
@@ -88,7 +94,6 @@ export class TaskListPageComponent {
           this.loadingTasks.set(false);
 
           const currentSelection = this.selectedTask();
-
           if (currentSelection) {
             const updatedSelection = tasks.find((task) => task.id === currentSelection.id) ?? null;
             this.selectedTask.set(updatedSelection);
@@ -106,8 +111,25 @@ export class TaskListPageComponent {
     this.loadTasks();
   }
 
+  toggleSort(field: TaskSortField): void {
+    const current = this.filters();
+    const nextDirection = current.sortBy === field && current.sortDirection === 'desc' ? 'asc' : 'desc';
+
+    this.filters.set({
+      ...current,
+      sortBy: field,
+      sortDirection: nextDirection
+    });
+
+    this.loadTasks();
+  }
+
   openTask(task: Task): void {
     this.selectedTask.set(task);
+  }
+
+  goToEdit(task: Task): void {
+    void this.router.navigate(['/tasks', task.id, 'edit']);
   }
 
   closeTask(): void {
@@ -124,6 +146,29 @@ export class TaskListPageComponent {
         },
         error: (error: unknown) => {
           this.taskError.set(getErrorMessage(error, 'Unable to update task status.'));
+        }
+      });
+  }
+
+  deleteTask(task: Task): void {
+    const confirmed = window.confirm(`Delete task "${task.title}"?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.tasksApi
+      .deleteTask(task.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          if (this.selectedTask()?.id === task.id) {
+            this.closeTask();
+          }
+          this.loadTasks();
+        },
+        error: (error: unknown) => {
+          this.taskError.set(getErrorMessage(error, 'Unable to delete task.'));
         }
       });
   }

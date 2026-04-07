@@ -1,9 +1,10 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/ui/error-state/error-state.component';
+import { PageHeaderComponent } from '../../../../shared/ui/page-header/page-header.component';
 import { getErrorMessage } from '../../../../shared/utils/http-error.utils';
 import { UserTableComponent } from '../../components/user-table/user-table.component';
 import { UsersApiService } from '../../data-access/users-api.service';
@@ -17,6 +18,7 @@ import { User } from '../../models/user.model';
 })
 export class UserListPageComponent {
   private readonly usersApi = inject(UsersApiService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly users = signal<User[]>([]);
@@ -44,5 +46,9 @@ export class UserListPageComponent {
           this.loading.set(false);
         }
       });
+  }
+
+  goToEdit(user: User): void {
+    void this.router.navigate(['/users', user.id, 'edit']);
   }
 }

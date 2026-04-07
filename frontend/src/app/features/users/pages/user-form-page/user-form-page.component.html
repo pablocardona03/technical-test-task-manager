@@ -1,12 +1,18 @@
 <div class="app-page">
-  <app-page-header
-    title="Create user"
-    subtitle="Register a new user with the appropriate role for the task workflow."
-  />
+  <app-page-header [title]="pageTitle()" [subtitle]="pageSubtitle()" backLink="/users" />
 
-  @if (error()) {
-    <app-error-state title="User could not be created" [message]="error()!" />
+  @if (loadError()) {
+    <app-error-state [message]="loadError()!" (retry)="reload()" />
+  } @else {
+    @if (saveError()) {
+      <app-error-state [title]="isEditMode() ? 'User could not be updated' : 'User could not be created'" [message]="saveError()!" />
+    }
+
+    <app-user-form
+      [user]="user()"
+      [submitting]="loading()"
+      [submitLabel]="submitLabel()"
+      (submitUser)="saveUser($event)"
+    />
   }
-
-  <app-user-form [submitting]="loading()" (submitUser)="createUser($event)" />
 </div>

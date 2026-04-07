@@ -11,6 +11,7 @@ type TaskFiltersForm = FormGroup<{
   assignedUserId: FormControl<string>;
   priority: FormControl<TaskPriority | ''>;
   tag: FormControl<string>;
+  hideCompleted: FormControl<boolean>;
 }>;
 
 @Component({
@@ -31,7 +32,8 @@ export class TaskFiltersComponent {
     status: new FormControl<TaskStatus | ''>('', { nonNullable: true }),
     assignedUserId: new FormControl('', { nonNullable: true }),
     priority: new FormControl<TaskPriority | ''>('', { nonNullable: true }),
-    tag: new FormControl('', { nonNullable: true })
+    tag: new FormControl('', { nonNullable: true }),
+    hideCompleted: new FormControl(true, { nonNullable: true })
   });
 
   constructor() {
@@ -44,7 +46,8 @@ export class TaskFiltersComponent {
           assignedUserId:
             currentValue.assignedUserId === null ? '' : String(currentValue.assignedUserId),
           priority: currentValue.priority,
-          tag: currentValue.tag
+          tag: currentValue.tag,
+          hideCompleted: currentValue.hideCompleted
         },
         { emitEvent: false }
       );
@@ -55,10 +58,12 @@ export class TaskFiltersComponent {
     const raw = this.form.getRawValue();
 
     this.apply.emit({
+      ...this.value(),
       status: raw.status,
       assignedUserId: raw.assignedUserId ? Number(raw.assignedUserId) : null,
       priority: raw.priority,
-      tag: raw.tag.trim()
+      tag: raw.tag.trim(),
+      hideCompleted: raw.status === 'Done' ? false : raw.hideCompleted
     });
   }
 
@@ -68,16 +73,19 @@ export class TaskFiltersComponent {
         status: '',
         assignedUserId: '',
         priority: '',
-        tag: ''
+        tag: '',
+        hideCompleted: true
       },
       { emitEvent: false }
     );
 
     this.apply.emit({
+      ...this.value(),
       status: '',
       assignedUserId: null,
       priority: '',
-      tag: ''
+      tag: '',
+      hideCompleted: true
     });
   }
 }

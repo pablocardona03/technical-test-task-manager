@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TechnicalTest.Domain.Enums;
 
 namespace TechnicalTest.Domain.Entities;
@@ -23,13 +18,20 @@ public class User
     {
     }
 
-    public User(string name, string email, UserRole role)
+    public User(string name, string email, UserRole role, bool isActive = true)
     {
         Name = name;
         Email = email;
         Role = role;
-        IsActive = true;
+        IsActive = isActive;
         CreatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateDetails(string name, string email, UserRole role, bool isActive)
+    {
+        Name = name;
+        Email = email;
+        Role = role;
+        IsActive = isActive;
+    }
 }
-    

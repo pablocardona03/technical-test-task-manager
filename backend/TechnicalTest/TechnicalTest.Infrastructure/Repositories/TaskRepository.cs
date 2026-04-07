@@ -20,7 +20,6 @@ public sealed class TaskRepository : ITaskRepository
     public async Task<TaskItem?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         return await _context.Tasks
-            .AsNoTracking()
             .Include(x => x.AssignedUser)
             .Include(x => x.CreatedByUser)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -28,13 +27,19 @@ public sealed class TaskRepository : ITaskRepository
 
     public async Task<IReadOnlyCollection<TaskItem>> GetAllAsync(TaskQueryFilters filters, CancellationToken cancellationToken = default)
     {
-        var sql = new StringBuilder("SELECT * FROM dbo.Tasks AS t WHERE 1 = 1");
-        var parameters = new List<object>();
+        var sql = new StringBuilder("SELECT t.[Id] FROM dbo.Tasks AS t WHERE 1 = 1");
+        var parameters = new List<SqlParameter>();
 
         if (filters.Status.HasValue)
         {
             sql.Append(" AND t.[Status] = @status");
             parameters.Add(new SqlParameter("@status", filters.Status.Value.ToString()));
+        }
+
+        if (filters.HideCompleted)
+        {
+            sql.Append(" AND t.[Status] <> @completedStatus");
+            parameters.Add(new SqlParameter("@completedStatus", "Done"));
         }
 
         if (filters.AssignedUserId.HasValue)
@@ -67,15 +72,31 @@ public sealed class TaskRepository : ITaskRepository
             parameters.Add(new SqlParameter("@tag", filters.Tag.Trim()));
         }
 
-        var query = _context.Tasks
-            .FromSqlRaw(sql.ToString(), parameters.ToArray())
+        sql.Append(" ORDER BY ");
+        sql.Append(BuildOrderByClause(filters));
+
+        var orderedIds = await _context.Database
+            .SqlQueryRaw<int>(sql.ToString(), parameters.Cast<object>().ToArray())
+            .ToListAsync(cancellationToken);
+
+        if (orderedIds.Count == 0)
+        {
+            return [];
+        }
+
+        var tasks = await _context.Tasks
             .AsNoTracking()
             .Include(x => x.AssignedUser)
-            .Include(x => x.CreatedByUser);
-
-        return await query
-            .OrderByDescending(x => x.CreatedAt)
+            .Include(x => x.CreatedByUser)
+            .Where(x => orderedIds.Contains(x.Id))
             .ToListAsync(cancellationToken);
+
+        var tasksById = tasks.ToDictionary(x => x.Id);
+
+        return orderedIds
+            .Where(tasksById.ContainsKey)
+            .Select(id => tasksById[id])
+            .ToList();
     }
 
     public async Task<TaskItem> AddAsync(TaskItem task, CancellationToken cancellationToken = default)
@@ -90,5 +111,27 @@ public sealed class TaskRepository : ITaskRepository
     {
         _context.Tasks.Update(task);
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(TaskItem task, CancellationToken cancellationToken = default)
+    {
+        _context.Tasks.Remove(task);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string BuildOrderByClause(TaskQueryFilters filters)
+    {
+        var direction = string.Equals(filters.SortDirection, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "ASC"
+            : "DESC";
+
+        var sortBy = filters.SortBy?.Trim().ToLowerInvariant();
+
+        return sortBy switch
+        {
+            "estimatedenddate" => $"CASE WHEN JSON_VALUE(t.[AdditionalDataJson], '$.estimatedEndDate') IS NULL THEN 1 ELSE 0 END ASC, JSON_VALUE(t.[AdditionalDataJson], '$.estimatedEndDate') {direction}, t.[CreatedAt] DESC",
+            "priority" => $"CASE WHEN JSON_VALUE(t.[AdditionalDataJson], '$.priority') IS NULL THEN 1 ELSE 0 END ASC, CASE JSON_VALUE(t.[AdditionalDataJson], '$.priority') WHEN 'Low' THEN 1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 WHEN 'Critical' THEN 4 ELSE 5 END {direction}, t.[CreatedAt] DESC",
+            _ => $"t.[CreatedAt] {direction}"
+        };
     }
 }

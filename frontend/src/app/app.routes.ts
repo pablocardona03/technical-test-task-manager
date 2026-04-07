@@ -27,6 +27,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'tasks/:id/edit',
+        loadComponent: () =>
+          import('./features/tasks/pages/task-form-page/task-form-page.component').then(
+            (module) => module.TaskFormPageComponent
+          )
+      },
+      {
         path: 'users',
         loadComponent: () =>
           import('./features/users/pages/user-list-page/user-list-page.component').then(
@@ -35,6 +42,13 @@ export const routes: Routes = [
       },
       {
         path: 'users/new',
+        loadComponent: () =>
+          import('./features/users/pages/user-form-page/user-form-page.component').then(
+            (module) => module.UserFormPageComponent
+          )
+      },
+      {
+        path: 'users/:id/edit',
         loadComponent: () =>
           import('./features/users/pages/user-form-page/user-form-page.component').then(
             (module) => module.UserFormPageComponent

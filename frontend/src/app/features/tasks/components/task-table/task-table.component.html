@@ -7,9 +7,19 @@
           <th>Status</th>
           <th>Assigned</th>
           <th>Created by</th>
-          <th>Priority</th>
-          <th>Estimated end</th>
-          <th>Actions</th>
+          <th>
+            <button type="button" class="inline-flex items-center gap-2 text-left" (click)="sortChange.emit('priority')">
+              <span>Priority</span>
+              <span class="text-slate-400">{{ getSortLabel('priority') }}</span>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="inline-flex items-center gap-2 text-left" (click)="sortChange.emit('estimatedEndDate')">
+              <span>Estimated end</span>
+              <span class="text-slate-400">{{ getSortLabel('estimatedEndDate') }}</span>
+            </button>
+          </th>
+          <th class="w-[190px]">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -28,23 +38,36 @@
             <td><app-status-badge [status]="task.status" /></td>
             <td>{{ task.assignedUserName }}</td>
             <td>{{ task.createdByUserName }}</td>
-            <td>{{ task.priority || '—' }}</td>
-            <td>{{ task.estimatedEndDate || '—' }}</td>
+            <td>
+              <span class="app-pill" [class]="getPriorityClass(task.priority)">{{ getPriorityLabel(task.priority) }}</span>
+            </td>
+            <td>{{ task.estimatedEndDate ? (task.estimatedEndDate | date: 'mediumDate') : '—' }}</td>
             <td>
               <div class="flex flex-wrap gap-2">
-                <button type="button" class="app-btn-secondary" (click)="viewTask.emit(task)">
-                  View
+                <button type="button" class="app-icon-btn" title="View" aria-label="View" (click)="viewTask.emit(task)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
-
+                <button type="button" class="app-icon-btn" title="Edit" aria-label="Edit" (click)="editTask.emit(task)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+                </button>
                 @if (getNextStatus(task.status); as nextStatus) {
                   <button
                     type="button"
-                    class="app-btn-primary"
+                    class="app-icon-btn app-icon-btn-primary"
+                    [title]="getActionLabel(task.status)"
+                    [attr.aria-label]="getActionLabel(task.status)"
                     (click)="changeStatus.emit({ taskId: task.id, status: nextStatus })"
                   >
-                    {{ getActionLabel(task.status) }}
+                    @if (task.status === 'Pending') {
+                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 11 7-11 7V5Z"/></svg>
+                    } @else {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+                    }
                   </button>
                 }
+                <button type="button" class="app-icon-btn app-icon-btn-danger" title="Delete" aria-label="Delete" (click)="deleteTask.emit(task)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                </button>
               </div>
             </td>
           </tr>
@@ -67,10 +90,13 @@
         </div>
 
         <div class="mt-4 grid gap-3 text-sm text-slate-600">
-          <div><span class="font-medium text-slate-700">Priority:</span> {{ task.priority || '—' }}</div>
+          <div>
+            <span class="font-medium text-slate-700">Priority:</span>
+            <span class="ml-2 app-pill" [class]="getPriorityClass(task.priority)">{{ getPriorityLabel(task.priority) }}</span>
+          </div>
           <div>
             <span class="font-medium text-slate-700">Estimated end:</span>
-            {{ task.estimatedEndDate || '—' }}
+            {{ task.estimatedEndDate ? (task.estimatedEndDate | date: 'mediumDate') : '—' }}
           </div>
           @if (task.tags.length) {
             <div class="flex flex-wrap gap-2">
@@ -82,16 +108,30 @@
         </div>
 
         <div class="mt-4 flex flex-wrap gap-2">
-          <button type="button" class="app-btn-secondary" (click)="viewTask.emit(task)">View</button>
+          <button type="button" class="app-icon-btn" title="View" aria-label="View" (click)="viewTask.emit(task)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button type="button" class="app-icon-btn" title="Edit" aria-label="Edit" (click)="editTask.emit(task)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>
+          </button>
           @if (getNextStatus(task.status); as nextStatus) {
             <button
               type="button"
-              class="app-btn-primary"
+              class="app-icon-btn app-icon-btn-primary"
+              [title]="getActionLabel(task.status)"
+              [attr.aria-label]="getActionLabel(task.status)"
               (click)="changeStatus.emit({ taskId: task.id, status: nextStatus })"
             >
-              {{ getActionLabel(task.status) }}
+              @if (task.status === 'Pending') {
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="m8 5 11 7-11 7V5Z"/></svg>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+              }
             </button>
           }
+          <button type="button" class="app-icon-btn app-icon-btn-danger" title="Delete" aria-label="Delete" (click)="deleteTask.emit(task)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>
         </div>
       </article>
     }

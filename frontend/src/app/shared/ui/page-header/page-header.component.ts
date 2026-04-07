@@ -12,4 +12,6 @@ export class PageHeaderComponent {
   readonly subtitle = input<string>('');
   readonly actionLabel = input<string>('');
   readonly actionLink = input<string>('');
+  readonly backLabel = input<string>('Back');
+  readonly backLink = input<string>('');
 }

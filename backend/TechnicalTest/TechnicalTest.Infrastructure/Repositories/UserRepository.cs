@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using TechnicalTest.Application.Interfaces.Repositories;
 using TechnicalTest.Domain.Entities;
@@ -39,10 +34,10 @@ public sealed class UserRepository : IUserRepository
             .AnyAsync(x => x.Id == id, cancellationToken);
     }
 
-    public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsByEmailAsync(string email, int? excludedUserId = null, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .AnyAsync(x => x.Email.ToLower() == email.ToLower(), cancellationToken);
+            .AnyAsync(x => x.Email.ToLower() == email.ToLower() && (!excludedUserId.HasValue || x.Id != excludedUserId.Value), cancellationToken);
     }
 
     public async Task<User> AddAsync(User user, CancellationToken cancellationToken = default)
@@ -51,5 +46,23 @@ public sealed class UserRepository : IUserRepository
         await _context.SaveChangesAsync(cancellationToken);
 
         return user;
+    }
+
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(User user, CancellationToken cancellationToken = default)
+    {
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasRelatedTasksAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Tasks
+            .AnyAsync(x => x.AssignedUserId == userId || x.CreatedByUserId == userId, cancellationToken);
     }
 }

@@ -7,11 +7,7 @@
   />
 
   @if (usersError()) {
-    <app-error-state
-      title="Users could not be loaded"
-      [message]="usersError()!"
-      (retry)="loadUsers()"
-    />
+    <app-error-state title="Users could not be loaded" [message]="usersError()!" (retry)="loadUsers()" />
   }
 
   <app-task-filters [users]="users()" [value]="filters()" (apply)="applyFilters($event)" />
@@ -39,18 +35,28 @@
   } @else {
     <app-task-table
       [tasks]="tasks()"
+      [sortBy]="filters().sortBy"
+      [sortDirection]="filters().sortDirection"
+      (sortChange)="toggleSort($event)"
       (viewTask)="openTask($event)"
+      (editTask)="goToEdit($event)"
+      (deleteTask)="deleteTask($event)"
       (changeStatus)="updateStatus($event)"
     />
   }
 
-  <app-drawer
-    [open]="selectedTask() !== null"
-    title="Task details"
-    (close)="closeTask()"
-  >
+  <app-drawer [open]="selectedTask() !== null" title="Task details" (close)="closeTask()">
     @if (selectedTask(); as task) {
       <app-task-detail [task]="task" />
+
+      <div class="mt-6 flex flex-wrap gap-3">
+        <button type="button" class="app-btn-secondary" (click)="goToEdit(task)">Edit task</button>
+        @if (task.status === 'Pending') {
+          <button type="button" class="app-btn-primary" (click)="updateStatus({ taskId: task.id, status: 'InProgress' })">Start task</button>
+        } @else if (task.status === 'InProgress') {
+          <button type="button" class="app-btn-primary" (click)="updateStatus({ taskId: task.id, status: 'Done' })">Mark as completed</button>
+        }
+      </div>
     }
   </app-drawer>
 </div>

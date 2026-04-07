@@ -1,13 +1,15 @@
-import { Component, input, output } from '@angular/core';
+import { Component, effect, input, output } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CreateUserRequest } from '../../models/create-user.request';
 import { UserRole } from '../../models/user-role.type';
+import { User } from '../../models/user.model';
 
 type UserFormGroup = FormGroup<{
   name: FormControl<string>;
   email: FormControl<string>;
   role: FormControl<UserRole>;
+  isActive: FormControl<boolean>;
 }>;
 
 @Component({
@@ -18,6 +20,8 @@ type UserFormGroup = FormGroup<{
 })
 export class UserFormComponent {
   readonly submitting = input<boolean>(false);
+  readonly submitLabel = input<string>('Save user');
+  readonly user = input<User | null>(null);
   readonly submitUser = output<CreateUserRequest>();
   readonly roleOptions: UserRole[] = ['Admin', 'Manager', 'Collaborator'];
 
@@ -30,8 +34,29 @@ export class UserFormComponent {
     role: new FormControl<UserRole>('Collaborator', {
       nonNullable: true,
       validators: [Validators.required]
-    })
+    }),
+    isActive: new FormControl(true, { nonNullable: true })
   });
+
+  constructor() {
+    effect(() => {
+      const user = this.user();
+
+      if (!user) {
+        return;
+      }
+
+      this.form.setValue(
+        {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive
+        },
+        { emitEvent: false }
+      );
+    });
+  }
 
   save(): void {
     if (this.form.invalid) {
@@ -44,7 +69,8 @@ export class UserFormComponent {
     this.submitUser.emit({
       name: raw.name.trim(),
       email: raw.email.trim(),
-      role: raw.role
+      role: raw.role,
+      isActive: raw.isActive
     });
   }
 }

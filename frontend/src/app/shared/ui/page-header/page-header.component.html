@@ -1,8 +1,14 @@
-<div
-  class="app-surface flex flex-col gap-5 px-6 py-6 md:flex-row md:items-start md:justify-between md:px-8 md:py-7"
->
+<div class="app-surface flex flex-col gap-5 px-6 py-6 md:flex-row md:items-start md:justify-between md:px-8 md:py-7">
   <div class="max-w-3xl">
+    @if (backLink()) {
+      <a [routerLink]="backLink()" class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900">
+        <span aria-hidden="true">←</span>
+        <span>{{ backLabel() }}</span>
+      </a>
+    }
+
     <h1 class="app-title">{{ title() }}</h1>
+
     @if (subtitle()) {
       <p class="app-subtitle">{{ subtitle() }}</p>
     }

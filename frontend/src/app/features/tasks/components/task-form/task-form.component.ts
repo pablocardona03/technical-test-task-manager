@@ -1,9 +1,15 @@
-import { Component, effect, input, output, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, effect, input, output } from '@angular/core';
+import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { User } from '../../../users/models/user.model';
 import { CreateTaskRequest } from '../../models/create-task.request';
 import { TaskPriority } from '../../models/task-priority.type';
+import { Task } from '../../models/task.model';
+
+type AdditionalItemGroup = FormGroup<{
+  title: FormControl<string>;
+  description: FormControl<string>;
+}>;
 
 type TaskFormGroup = FormGroup<{
   title: FormControl<string>;
@@ -13,7 +19,7 @@ type TaskFormGroup = FormGroup<{
   priority: FormControl<TaskPriority | ''>;
   estimatedEndDate: FormControl<string>;
   tags: FormControl<string>;
-  freeMetadata: FormControl<string>;
+  additionalItems: FormArray<AdditionalItemGroup>;
 }>;
 
 @Component({
@@ -25,9 +31,9 @@ type TaskFormGroup = FormGroup<{
 export class TaskFormComponent {
   readonly users = input.required<User[]>();
   readonly submitting = input<boolean>(false);
+  readonly submitLabel = input<string>('Save task');
+  readonly task = input<Task | null>(null);
   readonly submitTask = output<CreateTaskRequest>();
-
-  readonly metadataError = signal<string | null>(null);
   readonly priorityOptions: TaskPriority[] = ['Low', 'Medium', 'High', 'Critical'];
 
   readonly form: TaskFormGroup = new FormGroup({
@@ -38,57 +44,72 @@ export class TaskFormComponent {
     priority: new FormControl<TaskPriority | ''>('', { nonNullable: true }),
     estimatedEndDate: new FormControl('', { nonNullable: true }),
     tags: new FormControl('', { nonNullable: true }),
-    freeMetadata: new FormControl('', { nonNullable: true })
+    additionalItems: new FormArray<AdditionalItemGroup>([])
   });
 
   constructor() {
     effect(() => {
-      const users = this.users();
+      const task = this.task();
+      const activeUsers = this.activeUsers();
 
-      if (users.length && !this.form.controls.createdByUserId.value) {
-        this.form.controls.createdByUserId.setValue(String(users[0].id), { emitEvent: false });
+      if (task) {
+        this.form.controls.title.setValue(task.title, { emitEvent: false });
+        this.form.controls.description.setValue(task.description ?? '', { emitEvent: false });
+        this.form.controls.assignedUserId.setValue(String(task.assignedUserId), { emitEvent: false });
+        this.form.controls.createdByUserId.setValue(String(task.createdByUserId), { emitEvent: false });
+        this.form.controls.priority.setValue(task.priority ?? '', { emitEvent: false });
+        this.form.controls.estimatedEndDate.setValue(task.estimatedEndDate ?? '', { emitEvent: false });
+        this.form.controls.tags.setValue(task.tags.join(', '), { emitEvent: false });
+        this.resetAdditionalItems(task.additionalItems);
+        return;
+      }
+
+      if (!this.form.controls.createdByUserId.value && activeUsers.length) {
+        this.form.controls.createdByUserId.setValue(String(activeUsers[0].id), { emitEvent: false });
       }
     });
   }
 
-  save(): void {
-    this.metadataError.set(null);
+  get additionalItems(): FormArray<AdditionalItemGroup> {
+    return this.form.controls.additionalItems;
+  }
 
+  activeUsers(): User[] {
+    return this.users().filter((user: User) => user.isActive);
+  }
+
+  addAdditionalItem(): void {
+    this.additionalItems.push(this.createAdditionalItemGroup());
+  }
+
+  removeAdditionalItem(index: number): void {
+    this.additionalItems.removeAt(index);
+  }
+
+  save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
     const raw = this.form.getRawValue();
-    let freeMetadata: Record<string, unknown> = {};
-
-    if (raw.freeMetadata.trim()) {
-      try {
-        const parsed = JSON.parse(raw.freeMetadata.trim()) as unknown;
-
-        if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-          throw new Error('Advanced metadata must be a valid JSON object.');
-        }
-
-        freeMetadata = parsed as Record<string, unknown>;
-      } catch (error) {
-        this.metadataError.set(
-          error instanceof Error ? error.message : 'Advanced metadata must be valid JSON.'
-        );
-        return;
-      }
-    }
-
     const tags = raw.tags
       .split(',')
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0);
+
+    const additionalItems = raw.additionalItems
+      .map((item: { title: string; description: string }) => ({
+        title: item.title.trim(),
+        description: item.description.trim()
+      }))
+      .filter((item: { title: string; description: string }) => item.title.length > 0 && item.description.length > 0);
 
     const additionalData = {
       ...(raw.priority ? { priority: raw.priority } : {}),
       ...(raw.estimatedEndDate ? { estimatedEndDate: raw.estimatedEndDate } : {}),
       ...(tags.length ? { tags } : {}),
-      ...(Object.keys(freeMetadata).length ? { metadata: freeMetadata } : {})
+      ...(additionalItems.length ? { additionalItems } : {})
     };
 
     this.submitTask.emit({
@@ -97,6 +118,27 @@ export class TaskFormComponent {
       assignedUserId: Number(raw.assignedUserId),
       createdByUserId: Number(raw.createdByUserId),
       additionalDataJson: JSON.stringify(additionalData)
+    });
+  }
+
+  private createAdditionalItemGroup(value?: { title?: string; description?: string }): AdditionalItemGroup {
+    return new FormGroup({
+      title: new FormControl(value?.title ?? '', { nonNullable: true }),
+      description: new FormControl(value?.description ?? '', { nonNullable: true })
+    });
+  }
+
+  private resetAdditionalItems(items: Task['additionalItems']): void {
+    while (this.additionalItems.length) {
+      this.additionalItems.removeAt(0);
+    }
+
+    if (!items.length) {
+      return;
+    }
+
+    items.forEach((item) => {
+      this.additionalItems.push(this.createAdditionalItemGroup(item));
     });
   }
 }

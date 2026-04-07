@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TechnicalTest.Application.DTOs.Tasks;
 using TechnicalTest.Domain.Entities;
 
@@ -14,4 +9,5 @@ public interface ITaskRepository
     Task<IReadOnlyCollection<TaskItem>> GetAllAsync(TaskQueryFilters filters, CancellationToken cancellationToken = default);
     Task<TaskItem> AddAsync(TaskItem task, CancellationToken cancellationToken = default);
     Task UpdateAsync(TaskItem task, CancellationToken cancellationToken = default);
+    Task DeleteAsync(TaskItem task, CancellationToken cancellationToken = default);
 }

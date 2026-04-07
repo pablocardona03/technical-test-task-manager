@@ -21,30 +21,7 @@ public sealed class TaskService : ITaskService
 
     public async Task<TaskResponse> CreateAsync(CreateTaskRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Title))
-        {
-            throw new BusinessRuleException("Task title is required.");
-        }
-
-        if (request.AssignedUserId <= 0)
-        {
-            throw new BusinessRuleException("Assigned user is required.");
-        }
-
-        if (request.CreatedByUserId <= 0)
-        {
-            throw new BusinessRuleException("Created by user is required.");
-        }
-
-        if (!await _userRepository.ExistsByIdAsync(request.AssignedUserId, cancellationToken))
-        {
-            throw new NotFoundException("Assigned user was not found.");
-        }
-
-        if (!await _userRepository.ExistsByIdAsync(request.CreatedByUserId, cancellationToken))
-        {
-            throw new NotFoundException("Created by user was not found.");
-        }
+        await ValidateTaskRequestAsync(request.Title, request.AssignedUserId, request.CreatedByUserId, cancellationToken);
 
         var normalizedJson = NormalizeJson(request.AdditionalDataJson);
 
@@ -82,6 +59,33 @@ public sealed class TaskService : ITaskService
         return MapToResponse(task);
     }
 
+    public async Task<TaskResponse> UpdateAsync(int id, UpdateTaskRequest request, CancellationToken cancellationToken = default)
+    {
+        var task = await _taskRepository.GetByIdAsync(id, cancellationToken);
+
+        if (task is null)
+        {
+            throw new NotFoundException("Task was not found.");
+        }
+
+        await ValidateTaskRequestAsync(request.Title, request.AssignedUserId, request.CreatedByUserId, cancellationToken);
+
+        var normalizedJson = NormalizeJson(request.AdditionalDataJson);
+
+        task.UpdateDetails(
+            request.Title.Trim(),
+            string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+            request.AssignedUserId,
+            request.CreatedByUserId,
+            normalizedJson);
+
+        await _taskRepository.UpdateAsync(task, cancellationToken);
+
+        var updatedTask = await _taskRepository.GetByIdAsync(id, cancellationToken);
+
+        return MapToResponse(updatedTask ?? task);
+    }
+
     public async Task<TaskResponse> UpdateStatusAsync(int id, UpdateTaskStatusRequest request, CancellationToken cancellationToken = default)
     {
         var task = await _taskRepository.GetByIdAsync(id, cancellationToken);
@@ -103,6 +107,58 @@ public sealed class TaskService : ITaskService
         var updatedTask = await _taskRepository.GetByIdAsync(id, cancellationToken);
 
         return MapToResponse(updatedTask ?? task);
+    }
+
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var task = await _taskRepository.GetByIdAsync(id, cancellationToken);
+
+        if (task is null)
+        {
+            throw new NotFoundException("Task was not found.");
+        }
+
+        await _taskRepository.DeleteAsync(task, cancellationToken);
+    }
+
+    private async Task ValidateTaskRequestAsync(string title, int assignedUserId, int createdByUserId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new BusinessRuleException("Task title is required.");
+        }
+
+        if (assignedUserId <= 0)
+        {
+            throw new BusinessRuleException("Assigned user is required.");
+        }
+
+        if (createdByUserId <= 0)
+        {
+            throw new BusinessRuleException("Created by user is required.");
+        }
+
+        var assignedUser = await _userRepository.GetByIdAsync(assignedUserId, cancellationToken);
+        if (assignedUser is null)
+        {
+            throw new NotFoundException("Assigned user was not found.");
+        }
+
+        if (!assignedUser.IsActive)
+        {
+            throw new BusinessRuleException("Assigned user must be active.");
+        }
+
+        var createdByUser = await _userRepository.GetByIdAsync(createdByUserId, cancellationToken);
+        if (createdByUser is null)
+        {
+            throw new NotFoundException("Created by user was not found.");
+        }
+
+        if (!createdByUser.IsActive)
+        {
+            throw new BusinessRuleException("Created by user must be active.");
+        }
     }
 
     private static string NormalizeJson(string? json)
@@ -139,6 +195,7 @@ public sealed class TaskService : ITaskService
             Priority = ReadJsonString(task.AdditionalDataJson, "priority"),
             EstimatedEndDate = ReadJsonString(task.AdditionalDataJson, "estimatedEndDate"),
             Tags = ReadJsonArray(task.AdditionalDataJson, "tags"),
+            AdditionalItems = ReadAdditionalItems(task.AdditionalDataJson),
             CreatedAt = task.CreatedAt,
             UpdatedAt = task.UpdatedAt
         };
@@ -186,5 +243,74 @@ public sealed class TaskService : ITaskService
         {
             return [];
         }
+    }
+
+    private static IReadOnlyCollection<TaskAdditionalItemResponse> ReadAdditionalItems(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var items = new List<TaskAdditionalItemResponse>();
+
+            if (document.RootElement.TryGetProperty("additionalItems", out var additionalItemsElement)
+                && additionalItemsElement.ValueKind == JsonValueKind.Array)
+            {
+                items.AddRange(
+                    additionalItemsElement
+                        .EnumerateArray()
+                        .Select(ToAdditionalItem)
+                        .Where(x => x is not null)
+                        .Cast<TaskAdditionalItemResponse>());
+            }
+
+            if (document.RootElement.TryGetProperty("metadata", out var metadataElement)
+                && metadataElement.ValueKind == JsonValueKind.Object)
+            {
+                items.AddRange(
+                    metadataElement
+                        .EnumerateObject()
+                        .Select(property => new TaskAdditionalItemResponse
+                        {
+                            Title = property.Name,
+                            Description = property.Value.ValueKind == JsonValueKind.String
+                                ? property.Value.GetString() ?? string.Empty
+                                : property.Value.GetRawText()
+                        })
+                        .Where(item => !string.IsNullOrWhiteSpace(item.Title) && !string.IsNullOrWhiteSpace(item.Description)));
+            }
+
+            return items;
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static TaskAdditionalItemResponse? ToAdditionalItem(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var title = element.TryGetProperty("title", out var titleElement) && titleElement.ValueKind == JsonValueKind.String
+            ? titleElement.GetString()
+            : null;
+
+        var description = element.TryGetProperty("description", out var descriptionElement) && descriptionElement.ValueKind == JsonValueKind.String
+            ? descriptionElement.GetString()
+            : null;
+
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(description))
+        {
+            return null;
+        }
+
+        return new TaskAdditionalItemResponse
+        {
+            Title = title,
+            Description = description
+        };
     }
 }

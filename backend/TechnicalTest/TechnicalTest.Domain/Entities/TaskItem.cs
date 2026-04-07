@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TechnicalTest.Domain.Enums;
 
 namespace TechnicalTest.Domain.Entities;
@@ -35,6 +30,16 @@ public class TaskItem
         AdditionalDataJson = string.IsNullOrWhiteSpace(additionalDataJson) ? "{}" : additionalDataJson;
         Status = TaskItemStatus.Pending;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateDetails(string title, string? description, int assignedUserId, int createdByUserId, string additionalDataJson)
+    {
+        Title = title;
+        Description = description;
+        AssignedUserId = assignedUserId;
+        CreatedByUserId = createdByUserId;
+        AdditionalDataJson = string.IsNullOrWhiteSpace(additionalDataJson) ? "{}" : additionalDataJson;
         UpdatedAt = DateTime.UtcNow;
     }
 

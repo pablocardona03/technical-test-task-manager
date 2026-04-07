@@ -16,6 +16,7 @@ public sealed class TaskResponse
     public string? Priority { get; init; }
     public string? EstimatedEndDate { get; init; }
     public IReadOnlyCollection<string> Tags { get; init; } = [];
+    public IReadOnlyCollection<TaskAdditionalItemResponse> AdditionalItems { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
 }

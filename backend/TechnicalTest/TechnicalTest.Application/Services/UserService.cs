@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TechnicalTest.Application.DTOs.Users;
 using TechnicalTest.Application.Exceptions;
 using TechnicalTest.Application.Interfaces.Repositories;
@@ -22,24 +17,16 @@ public sealed class UserService : IUserService
 
     public async Task<UserResponse> CreateAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
-        {
-            throw new BusinessRuleException("User name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Email))
-        {
-            throw new BusinessRuleException("User email is required.");
-        }
+        ValidateUserRequest(request.Name, request.Email);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
-        if (await _userRepository.ExistsByEmailAsync(normalizedEmail, cancellationToken))
+        if (await _userRepository.ExistsByEmailAsync(normalizedEmail, null, cancellationToken))
         {
             throw new ConflictException("A user with the same email already exists.");
         }
 
-        var user = new User(request.Name.Trim(), normalizedEmail, request.Role);
+        var user = new User(request.Name.Trim(), normalizedEmail, request.Role, request.IsActive);
 
         var createdUser = await _userRepository.AddAsync(user, cancellationToken);
 
@@ -53,6 +40,73 @@ public sealed class UserService : IUserService
         return users
             .Select(MapToResponse)
             .ToList();
+    }
+
+    public async Task<UserResponse> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken);
+
+        if (user is null)
+        {
+            throw new NotFoundException("User was not found.");
+        }
+
+        return MapToResponse(user);
+    }
+
+    public async Task<UserResponse> UpdateAsync(int id, UpdateUserRequest request, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken);
+
+        if (user is null)
+        {
+            throw new NotFoundException("User was not found.");
+        }
+
+        ValidateUserRequest(request.Name, request.Email);
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        if (await _userRepository.ExistsByEmailAsync(normalizedEmail, id, cancellationToken))
+        {
+            throw new ConflictException("A user with the same email already exists.");
+        }
+
+        user.UpdateDetails(request.Name.Trim(), normalizedEmail, request.Role, request.IsActive);
+
+        await _userRepository.UpdateAsync(user, cancellationToken);
+
+        return MapToResponse(user);
+    }
+
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var user = await _userRepository.GetByIdAsync(id, cancellationToken);
+
+        if (user is null)
+        {
+            throw new NotFoundException("User was not found.");
+        }
+
+        if (await _userRepository.HasRelatedTasksAsync(id, cancellationToken))
+        {
+            throw new ConflictException("This user cannot be deleted because it is linked to one or more tasks. Deactivate the user instead.");
+        }
+
+        await _userRepository.DeleteAsync(user, cancellationToken);
+    }
+
+    private static void ValidateUserRequest(string name, string email)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new BusinessRuleException("User name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new BusinessRuleException("User email is required.");
+        }
     }
 
     private static UserResponse MapToResponse(User user)

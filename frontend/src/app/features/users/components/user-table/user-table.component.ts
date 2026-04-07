@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 import { User } from '../../models/user.model';
 
@@ -11,6 +11,7 @@ import { User } from '../../models/user.model';
 })
 export class UserTableComponent {
   readonly users = input.required<User[]>();
+  readonly editUser = output<User>();
 
   getRoleClass(role: User['role']): string {
     switch (role) {

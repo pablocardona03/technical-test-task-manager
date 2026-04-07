@@ -18,7 +18,7 @@
       }
     </div>
 
-    <div class="md:col-span-2">
+    <div>
       <label class="app-label" for="role">Role</label>
       <select id="role" class="app-select" formControlName="role">
         @for (role of roleOptions; track role) {
@@ -26,11 +26,18 @@
         }
       </select>
     </div>
+
+    <div class="flex items-end">
+      <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+        <input type="checkbox" formControlName="isActive" class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300" />
+        <span>Active user</span>
+      </label>
+    </div>
   </div>
 
   <div class="mt-6">
     <button type="submit" class="app-btn-primary" [disabled]="submitting()">
-      {{ submitting() ? 'Saving...' : 'Create user' }}
+      {{ submitting() ? 'Saving...' : submitLabel() }}
     </button>
   </div>
 </form>

@@ -1,6 +1,6 @@
 import { UserRole } from './user-role.type';
 
-export interface CreateUserRequest {
+export interface UpdateUserRequest {
   name: string;
   email: string;
   role: UserRole;

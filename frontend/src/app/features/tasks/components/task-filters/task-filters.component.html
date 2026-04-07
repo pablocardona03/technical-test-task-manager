@@ -1,8 +1,4 @@
-<form
-  class="app-section"
-  [formGroup]="form"
-  (ngSubmit)="submit()"
->
+<form class="app-section" [formGroup]="form" (ngSubmit)="submit()">
   <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
     <div>
       <label class="app-label" for="status">Status</label>
@@ -40,8 +36,20 @@
     </div>
   </div>
 
-  <div class="mt-4 flex flex-wrap gap-3">
-    <button type="submit" class="app-btn-primary">Apply filters</button>
-    <button type="button" class="app-btn-secondary" (click)="reset()">Reset</button>
+  <div class="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <label class="inline-flex items-center gap-3 text-sm font-medium text-slate-700">
+      <input
+        type="checkbox"
+        formControlName="hideCompleted"
+        class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+        (change)="submit()"
+      />
+      <span>Hide completed tasks</span>
+    </label>
+
+    <div class="flex flex-wrap gap-3">
+      <button type="submit" class="app-btn-primary">Apply filters</button>
+      <button type="button" class="app-btn-secondary" (click)="reset()">Reset</button>
+    </div>
   </div>
 </form>

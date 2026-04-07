@@ -1,20 +1,19 @@
 <div class="app-page">
-  <app-page-header
-    title="Create task"
-    subtitle="Register a task, assign the responsible user and attach additional metadata in JSON."
-  />
+  <app-page-header [title]="pageTitle()" [subtitle]="pageSubtitle()" backLink="/tasks" />
 
   @if (loadError()) {
-    <app-error-state [message]="loadError()!" (retry)="loadUsers()" />
+    <app-error-state [message]="loadError()!" (retry)="reload()" />
   } @else {
     @if (saveError()) {
-      <app-error-state title="Task could not be created" [message]="saveError()!" />
+      <app-error-state [title]="isEditMode() ? 'Task could not be updated' : 'Task could not be created'" [message]="saveError()!" />
     }
 
     <app-task-form
       [users]="users()"
-      [submitting]="loading()"
-      (submitTask)="createTask($event)"
+      [task]="task()"
+      [submitting]="saving()"
+      [submitLabel]="submitLabel()"
+      (submitTask)="saveTask($event)"
     />
   }
 </div>

@@ -1,3 +1,4 @@
+import { TaskAdditionalItem } from './task-additional-item.model';
 import { TaskPriority } from './task-priority.type';
 import { TaskStatus } from './task-status.type';
 
@@ -14,6 +15,7 @@ export interface Task {
   priority: TaskPriority | null;
   estimatedEndDate: string | null;
   tags: string[];
+  additionalItems: TaskAdditionalItem[];
   createdAt: string;
   updatedAt: string;
 }

@@ -1,7 +1,7 @@
 <div class="app-page">
   <app-page-header
     title="Users"
-    subtitle="List the current users and review their roles in the task workflow."
+    subtitle="List the current users, review their roles and keep the workflow up to date."
     actionLabel="New user"
     actionLink="/users/new"
   />
@@ -26,6 +26,6 @@
       actionLink="/users/new"
     />
   } @else {
-    <app-user-table [users]="users()" />
+    <app-user-table [users]="users()" (editUser)="goToEdit($event)" />
   }
 </div>

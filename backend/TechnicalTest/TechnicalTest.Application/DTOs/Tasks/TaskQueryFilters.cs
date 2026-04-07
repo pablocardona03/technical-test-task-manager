@@ -10,4 +10,7 @@ public sealed class TaskQueryFilters
     public string? Priority { get; init; }
     public string? EstimatedEndDate { get; init; }
     public string? Tag { get; init; }
+    public bool HideCompleted { get; init; }
+    public string? SortBy { get; init; }
+    public string? SortDirection { get; init; }
 }
