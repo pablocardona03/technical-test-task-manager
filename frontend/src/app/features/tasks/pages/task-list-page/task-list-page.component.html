@@ -1,0 +1,56 @@
+<div class="app-page">
+  <app-page-header
+    title="Tasks"
+    subtitle="Create, review and update task progress with a simple and maintainable workflow."
+    actionLabel="New task"
+    actionLink="/tasks/new"
+  />
+
+  @if (usersError()) {
+    <app-error-state
+      title="Users could not be loaded"
+      [message]="usersError()!"
+      (retry)="loadUsers()"
+    />
+  }
+
+  <app-task-filters [users]="users()" [value]="filters()" (apply)="applyFilters($event)" />
+
+  @if (taskError()) {
+    <app-error-state [message]="taskError()!" (retry)="loadTasks()" />
+  } @else if (loadingTasks()) {
+    <div class="grid gap-4 md:grid-cols-2">
+      @for (item of [1, 2, 3, 4]; track item) {
+        <div class="app-section space-y-4">
+          <div class="h-5 w-2/3 animate-pulse rounded bg-slate-200"></div>
+          <div class="h-4 w-1/2 animate-pulse rounded bg-slate-200"></div>
+          <div class="h-4 w-full animate-pulse rounded bg-slate-100"></div>
+          <div class="h-10 w-32 animate-pulse rounded-xl bg-slate-200"></div>
+        </div>
+      }
+    </div>
+  } @else if (hasNoTasks()) {
+    <app-empty-state
+      title="No tasks found"
+      message="Create a new task or adjust the filters to see matching results."
+      actionLabel="Create task"
+      actionLink="/tasks/new"
+    />
+  } @else {
+    <app-task-table
+      [tasks]="tasks()"
+      (viewTask)="openTask($event)"
+      (changeStatus)="updateStatus($event)"
+    />
+  }
+
+  <app-drawer
+    [open]="selectedTask() !== null"
+    title="Task details"
+    (close)="closeTask()"
+  >
+    @if (selectedTask(); as task) {
+      <app-task-detail [task]="task" />
+    }
+  </app-drawer>
+</div>

@@ -1,0 +1,20 @@
+<div class="app-page">
+  <app-page-header
+    title="Create task"
+    subtitle="Register a task, assign the responsible user and attach additional metadata in JSON."
+  />
+
+  @if (loadError()) {
+    <app-error-state [message]="loadError()!" (retry)="loadUsers()" />
+  } @else {
+    @if (saveError()) {
+      <app-error-state title="Task could not be created" [message]="saveError()!" />
+    }
+
+    <app-task-form
+      [users]="users()"
+      [submitting]="loading()"
+      (submitTask)="createTask($event)"
+    />
+  }
+</div>

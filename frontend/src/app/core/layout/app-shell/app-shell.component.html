@@ -1,0 +1,13 @@
+<div class="min-h-screen bg-slate-100 text-slate-900">
+  <div class="flex min-h-screen w-full">
+    <app-sidebar class="hidden md:flex md:w-[260px] md:shrink-0" />
+    <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+      <app-topbar class="md:hidden" />
+      <main class="flex-1 px-4 py-4 md:px-8 md:py-8">
+        <div class="mx-auto w-full max-w-6xl">
+          <router-outlet />
+        </div>
+      </main>
+    </div>
+  </div>
+</div>

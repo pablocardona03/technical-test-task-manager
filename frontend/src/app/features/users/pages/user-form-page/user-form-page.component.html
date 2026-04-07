@@ -1,0 +1,12 @@
+<div class="app-page">
+  <app-page-header
+    title="Create user"
+    subtitle="Register a new user with the appropriate role for the task workflow."
+  />
+
+  @if (error()) {
+    <app-error-state title="User could not be created" [message]="error()!" />
+  }
+
+  <app-user-form [submitting]="loading()" (submitUser)="createUser($event)" />
+</div>

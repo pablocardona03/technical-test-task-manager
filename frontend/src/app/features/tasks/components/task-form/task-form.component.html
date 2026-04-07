@@ -1,0 +1,92 @@
+<form class="app-section" [formGroup]="form" (ngSubmit)="save()">
+  <div class="grid gap-5 md:grid-cols-2">
+    <div class="md:col-span-2">
+      <label class="app-label" for="title">Task title</label>
+      <input id="title" class="app-input" type="text" formControlName="title" placeholder="Enter task title" />
+      @if (form.controls.title.invalid && form.controls.title.touched) {
+        <p class="mt-2 text-sm text-rose-600">Title is required.</p>
+      }
+    </div>
+
+    <div class="md:col-span-2">
+      <label class="app-label" for="description">Description</label>
+      <textarea
+        id="description"
+        class="app-textarea"
+        formControlName="description"
+        placeholder="Optional task description"
+      ></textarea>
+    </div>
+
+    <div>
+      <label class="app-label" for="assignedUserId">Assigned user</label>
+      <select id="assignedUserId" class="app-select" formControlName="assignedUserId">
+        <option value="">Select a user</option>
+        @for (user of users(); track user.id) {
+          <option [value]="user.id">{{ user.name }}</option>
+        }
+      </select>
+      @if (form.controls.assignedUserId.invalid && form.controls.assignedUserId.touched) {
+        <p class="mt-2 text-sm text-rose-600">Assigned user is required.</p>
+      }
+    </div>
+
+    <div>
+      <label class="app-label" for="createdByUserId">Created by</label>
+      <select id="createdByUserId" class="app-select" formControlName="createdByUserId">
+        <option value="">Select a user</option>
+        @for (user of users(); track user.id) {
+          <option [value]="user.id">{{ user.name }}</option>
+        }
+      </select>
+      @if (form.controls.createdByUserId.invalid && form.controls.createdByUserId.touched) {
+        <p class="mt-2 text-sm text-rose-600">Creator is required.</p>
+      }
+    </div>
+
+    <div>
+      <label class="app-label" for="priority">Priority</label>
+      <select id="priority" class="app-select" formControlName="priority">
+        <option value="">No priority</option>
+        @for (priority of priorityOptions; track priority) {
+          <option [value]="priority">{{ priority }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="app-label" for="estimatedEndDate">Estimated end date</label>
+      <input id="estimatedEndDate" class="app-input" type="date" formControlName="estimatedEndDate" />
+    </div>
+
+    <div class="md:col-span-2">
+      <label class="app-label" for="tags">Tags</label>
+      <input
+        id="tags"
+        class="app-input"
+        type="text"
+        formControlName="tags"
+        placeholder="Comma separated tags, for example: urgent, editorial"
+      />
+    </div>
+
+    <div class="md:col-span-2">
+      <label class="app-label" for="freeMetadata">Advanced metadata JSON</label>
+      <textarea
+        id="freeMetadata"
+        class="app-textarea"
+        formControlName="freeMetadata"
+        placeholder='Optional JSON object, for example: {"source":"manual","department":"ops"}'
+      ></textarea>
+      @if (metadataError()) {
+        <p class="mt-2 text-sm text-rose-600">{{ metadataError() }}</p>
+      }
+    </div>
+  </div>
+
+  <div class="mt-6 flex flex-wrap gap-3">
+    <button type="submit" class="app-btn-primary" [disabled]="submitting()">
+      {{ submitting() ? 'Saving...' : 'Create task' }}
+    </button>
+  </div>
+</form>

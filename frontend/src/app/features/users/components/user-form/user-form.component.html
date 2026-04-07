@@ -1,0 +1,36 @@
+<form class="app-section" [formGroup]="form" (ngSubmit)="save()">
+  <div class="grid gap-5 md:grid-cols-2">
+    <div>
+      <label class="app-label" for="name">Name</label>
+      <input id="name" class="app-input" type="text" formControlName="name" placeholder="Enter full name" />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <p class="mt-2 text-sm text-rose-600">Name is required.</p>
+      }
+    </div>
+
+    <div>
+      <label class="app-label" for="email">Email</label>
+      <input id="email" class="app-input" type="email" formControlName="email" placeholder="Enter email address" />
+      @if (form.controls.email.hasError('required') && form.controls.email.touched) {
+        <p class="mt-2 text-sm text-rose-600">Email is required.</p>
+      } @else if (form.controls.email.hasError('email') && form.controls.email.touched) {
+        <p class="mt-2 text-sm text-rose-600">Enter a valid email address.</p>
+      }
+    </div>
+
+    <div class="md:col-span-2">
+      <label class="app-label" for="role">Role</label>
+      <select id="role" class="app-select" formControlName="role">
+        @for (role of roleOptions; track role) {
+          <option [value]="role">{{ role }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="mt-6">
+    <button type="submit" class="app-btn-primary" [disabled]="submitting()">
+      {{ submitting() ? 'Saving...' : 'Create user' }}
+    </button>
+  </div>
+</form>
