@@ -1,0 +1,63 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: technicaltest-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      SA_PASSWORD: "${SA_PASSWORD}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+
+  sql-init:
+    image: mcr.microsoft.com/mssql-tools
+    container_name: technicaltest-sql-init
+    depends_on:
+      - sqlserver
+    environment:
+      SA_PASSWORD: "${SA_PASSWORD}"
+    volumes:
+      - ./database:/scripts
+    entrypoint: >
+      /bin/sh -c "
+      until /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P $$SA_PASSWORD -Q 'SELECT 1' > /dev/null 2>&1;
+      do
+        echo 'Waiting for SQL Server...';
+        sleep 5;
+      done;
+      /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P $$SA_PASSWORD -i /scripts/script.sql
+      "
+    restart: "no"
+
+  api:
+    build:
+      context: ./backend/TechnicalTest
+      dockerfile: Dockerfile
+    container_name: technicaltest-api
+    depends_on:
+      - sqlserver
+      - sql-init
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=TechnicalTestTasksDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: technicaltest-frontend
+    depends_on:
+      - api
+    ports:
+      - "4200:80"
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
