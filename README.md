@@ -27,6 +27,31 @@ The solution covers the requested minimum scope: user management, task managemen
 │   ├── 03_json_examples.sql
 │   └── script.sql
 ├── frontend/
+│   ├── src/
+│   │   └── app/
+│   │       ├── core/
+│   │       │   ├── config/
+│   │       │   └── layout/
+│   │       ├── features/
+│   │       │   ├── tasks/
+│   │       │   │   ├── components/
+│   │       │   │   ├── data-access/
+│   │       │   │   ├── models/
+│   │       │   │   └── pages/
+│   │       │   └── users/
+│   │       │       ├── components/
+│   │       │       ├── data-access/
+│   │       │       ├── models/
+│   │       │       └── pages/
+│   │       ├── shared/
+│   │       │   ├── ui/
+│   │       │   └── utils/
+│   │       ├── app.config.ts
+│   │       ├── app.routes.ts
+│   │       └── app.ts
+│   ├── angular.json
+│   ├── package.json
+│   └── proxy.conf.json
 ├── .env.example
 └── docker-compose.yml
 ```
@@ -61,9 +86,57 @@ The solution covers the requested minimum scope: user management, task managemen
 - JSON filtering from the API repository layer
 - Optional field update example with `JSON_MODIFY`
 
-## Local configuration
+## Configuration sources
 
-Copy `.env.example` to `.env` and adjust the values if necessary.
+This project can be executed in two different ways, and each one uses a different configuration source.
+
+### When using Docker Compose
+
+The project uses:
+
+```text
+.env
+```
+
+That file is consumed by Docker Compose to start SQL Server and the other containers.
+
+### When using `dotnet run` locally
+
+The backend does not read `.env` automatically.
+
+For local manual execution, the backend must use one of these:
+
+- `backend/TechnicalTest/TechnicalTest.Api/appsettings.Development.json`
+- real environment variables loaded in the shell session
+
+For this technical test, the simplest and clearest option is to configure:
+
+```text
+backend/TechnicalTest/TechnicalTest.Api/appsettings.Development.json
+```
+
+## Recommended execution path
+
+For any evaluator, the recommended path is:
+
+```text
+Docker Compose
+```
+
+It is the most portable option because it does not depend on a specific local SQL Server instance.
+
+## Option 1: Run the full project with Docker Compose
+
+### Prerequisites
+
+- Docker Desktop
+- Docker Compose
+
+### Step 1
+
+Create a `.env` file from `.env.example`.
+
+Example content:
 
 ```env
 SA_PASSWORD=Your_password123!
@@ -72,89 +145,122 @@ ASPNETCORE_ENVIRONMENT=Development
 ASPNETCORE_URLS=https://localhost:7094;http://localhost:5103
 ```
 
-### What each variable is used for
+Important note:
 
-- `SA_PASSWORD`: used by Docker Compose when starting SQL Server locally
-- `ConnectionStrings__DefaultConnection`: used by the backend when running locally outside Docker
-- `ASPNETCORE_ENVIRONMENT`: selects the ASP.NET Core environment
-- `ASPNETCORE_URLS`: defines the local backend URLs
+- for Docker Compose, the only value really required by the containers is `SA_PASSWORD`
+- the backend container uses the connection string defined inside `docker-compose.yml`
+- the other values are kept here as documentation for local manual execution
 
-## How to run the project
+### Step 2
 
-## Option 1: Full local run with Docker Compose
-
-### Prerequisites
-
-- Docker Desktop
-- Docker Compose
-
-### Steps
-
-1. Create `.env` from `.env.example`.
-2. Run the stack:
+Run the full stack:
 
 ```bash
 docker compose up --build
 ```
 
-3. Open:
+### Step 3
+
+Open the application:
 
 - Frontend: `http://localhost:4200`
-- API: `http://localhost:8080`
+- API: `http://localhost:8080/api/users`
 
-In this mode:
+### What should happen
 
-- SQL Server runs in Docker
+- SQL Server starts in Docker
 - `database/script.sql` initializes the database automatically
-- The frontend is served by Nginx
-- `/api` requests are proxied to the backend container
+- the backend starts and connects to the SQL Server container
+- the frontend starts and proxies `/api` requests through Nginx to the backend container
 
-## Option 2: Database script + backend and frontend locally
+### What to validate
 
-This is the most useful mode for the evaluator who wants to run the database script manually and then use the application locally.
+- users list loads
+- tasks list loads
+- a new user can be created
+- a new task can be created
+- a task can move from `Pending` to `InProgress`
+- a task can move from `InProgress` to `Done`
+- a task cannot move directly from `Pending` to `Done`
+
+## Option 2: Run the database script and execute backend and frontend locally
+
+This path is useful if the evaluator wants to run the backend and frontend directly on the machine instead of Docker.
 
 ### Prerequisites
 
 - .NET 8 SDK
 - Node.js 22 or compatible LTS version
 - npm
-- SQL Server 2022 or SQL Server container
+- SQL Server 2022, SQL Server Express, or another local SQL Server instance
 
-### 1. Create the database manually
+### Step 1
 
-Run:
+Run the database creation script manually in SQL Server:
 
 ```text
 database/script.sql
 ```
 
-This creates:
+That script creates:
 
-- database
+- the database
 - tables
 - constraints
 - indexes
 - seed data
 
-### 2. Set backend environment variables
+### Step 2
 
-#### PowerShell
+Edit this file:
 
-```powershell
-$env:ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=TechnicalTestTasksDb;User Id=sa;Password=Your_password123!;TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True"
-$env:ASPNETCORE_ENVIRONMENT="Development"
-$env:ASPNETCORE_URLS="https://localhost:7094;http://localhost:5103"
+```text
+backend/TechnicalTest/TechnicalTest.Api/appsettings.Development.json
 ```
 
-#### CMD
+The connection string must match the SQL Server instance where `database/script.sql` was executed.
 
-```cmd
-set ConnectionStrings__DefaultConnection=Server=localhost,1433;Database=TechnicalTestTasksDb;User Id=sa;Password=Your_password123!;TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True
-set ASPNETCORE_ENVIRONMENT=Development
-set ASPNETCORE_URLS=https://localhost:7094;http://localhost:5103
+#### Example using Docker SQL Server on localhost
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=TechnicalTestTasksDb;User Id=sa;Password=Your_password123!;TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
 ```
 
-### 3. Run the backend
+#### Example using SQL Server Express
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=.\\SQLEXPRESS;Database=TechnicalTestTasksDb;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+```
+
+Important note:
+
+- editing `.env` is not enough for `dotnet run`
+- the backend does not load `.env` automatically
+- for local manual execution, the correct place to configure the connection is `appsettings.Development.json`
+
+### Step 3
+
+Run the backend:
 
 ```bash
 cd backend/TechnicalTest
@@ -162,11 +268,24 @@ dotnet restore
 dotnet run --project TechnicalTest.Api
 ```
 
+The backend should start on:
+
+- `https://localhost:7094`
+- `http://localhost:5103`
+
 Swagger:
 
 - `https://localhost:7094/swagger`
 
-### 4. Run the frontend
+If HTTPS certificates are not trusted yet, run once:
+
+```bash
+dotnet dev-certs https --trust
+```
+
+### Step 4
+
+Open a second terminal and run the frontend:
 
 ```bash
 cd frontend
@@ -174,13 +293,24 @@ npm ci
 npm start
 ```
 
-The Angular application uses `proxy.conf.json` and expects the API at:
+The frontend uses `proxy.conf.json` and expects the backend at:
 
 - `https://localhost:7094`
 
 Open:
 
 - `http://localhost:4200`
+
+### Step 5
+
+Validate the application behavior:
+
+- users list loads
+- tasks list loads
+- a new user can be created
+- a new task can be created
+- status transitions work correctly
+- direct transition from `Pending` to `Done` is rejected
 
 ## Technical decisions
 
@@ -194,6 +324,21 @@ Open:
 - Entity Framework Core is used for persistence
 - SQL Server specific JSON filtering is implemented in the repository with `JSON_VALUE` and `OPENJSON`
 
+### Frontend
+
+- Feature-based organization with `tasks` and `users`
+- `core` contains shell, layout and shared application configuration
+- `shared` contains reusable UI components and helper utilities
+- `data-access` services isolate HTTP communication with the API
+- `models` centralize frontend contracts and view types
+- `pages` contain route-level orchestration and local state
+- Angular standalone components were used to keep the project modular and lightweight
+- Reactive forms were used for task and user creation/editing
+- Lazy-loaded routes were used for feature pages
+- Signals were used for local state handling in pages
+- The UI consumes the backend through `/api` and uses a proxy in development
+- Task additional information is composed in the frontend and sent as JSON text to the API
+
 ### Database
 
 - `Users` and `Tasks` are separated with explicit foreign keys
@@ -204,15 +349,6 @@ Open:
   - by assigned user, status and creation date
   - by creator and creation date
 - A single `script.sql` was included for quick evaluator setup, plus separated scripts for schema, seed and JSON examples
-
-### Frontend
-
-- Angular standalone components were used to keep the project modular and lightweight
-- Reactive forms were used for task and user creation/editing
-- Lazy-loaded routes were used for feature pages
-- Signals were used for local state handling in pages
-- The UI consumes the backend through `/api` and uses a proxy in development
-- Task additional information is composed in the frontend and sent as JSON text to the API
 
 ### Dev experience
 
@@ -230,7 +366,6 @@ The required minimum scope is covered. The following items were intentionally le
 - Frontend support for every API filter exposed by the backend, such as filtering by creator or estimated end date
 - Frontend support for deleting users
 - CI pipeline for build, test and deployment validation
-- Production API base URL strategy for non-Docker Compose deployments such as Render
 
 ## Example SQL queries for JSON support
 
@@ -299,21 +434,6 @@ UPDATE dbo.Tasks
 SET AdditionalDataJson = JSON_MODIFY(AdditionalDataJson, '$.priority', 'Medium')
 WHERE Id = 1;
 ```
-
-## Render deployment note
-
-A deployment guide for Render is included in:
-
-```text
-DEPLOY_RENDER.md
-```
-
-Short version:
-
-- backend on Render: yes
-- frontend on Render: yes, with a production API URL adjustment
-- managed SQL Server on Render: no documented native offering
-- self-hosted SQL Server on Render: possible, but not recommended for production
 
 ## Important notes before publishing the repository
 
